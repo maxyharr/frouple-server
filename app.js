@@ -6,11 +6,17 @@ var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 var graphqlHTTP = require('express-graphql');
 
+import { mongodb } from 'mongodb';
+import monk from 'monk';
+
 var index = require('./routes/index');
 var users = require('./routes/users');
 import { schema } from './graphql/schema';
 
 var app = express();
+const production = app.get('env') === 'production';
+// TODO: ADD a production mongo server
+export const db = monk(production ? 'PRODUCTION MONGO SERVER' : 'localhost:27017/frouple-server');
 
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
@@ -23,17 +29,16 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+
+app.use((req, res, next) => {
+  req.db = db;
+  next();
+});
+
 app.use('/graphql', graphqlHTTP({
   schema: schema,
   graphiql: true
 }))
-
-import { graphql } from 'graphql';
-graphql(schema, '{ hello }').then(result => {
-  console.log('----------------------------');
-  console.log('result: ', result);
-  console.log('----------------------------');
-})
 
 app.use('/', index);
 app.use('/users', users);
